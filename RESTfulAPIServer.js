@@ -32,7 +32,7 @@ mongoClient.connect(url, {useNewURLParser:true}, function(err,db){
   var dbo = db.db("amazon");   
   var collection = dbo.collection('reviews');
   
-  //Get a review
+//Get a review
   router.get('/review/:reviewid', jsonparser, function(req, res){
     //res.json(getdata);
     collection.aggregate([{$match: {"review.id": `${req.params.reviewid}`}}]).toArray(function(err, results) {
@@ -46,26 +46,29 @@ mongoClient.connect(url, {useNewURLParser:true}, function(err,db){
   });
   });
   
-  //Get random reviews by stars
+//Get random reviews by stars
   router.get('/review/random/:n/:stars', function(req, res){
     //res.json(getdata);
     var stars = parseInt(req.params.stars);
     var review_num = parseInt(req.params.n);
-    collection.aggregate([{$match: {"review.star_rating": stars }}, 
-    { $sample: { size: review_num } }]).toArray(function(err, results) { 
-    if(!err) {
+    collection.aggregate([
+      {$match: 
+        {"review.star_rating": stars }
+      }, 
+      {$sample: { size: review_num } }
+    ]).toArray(function(err, results) { 
+      if(!err) {
         res.json(results);
-    }
-    else {
+      }
+      else {
         res.send(err);
         db.close();
-    }
+      }
      });
-    });
+  });
     
     
-    
-    //Get random reviews by date
+//Get random reviews by date
   router.get('/review/:n/:from_date/:to_date', function(res, req){
     //res.json(getdata);
     var from = new Date(req.params.from_date);
@@ -77,10 +80,11 @@ mongoClient.connect(url, {useNewURLParser:true}, function(err,db){
         {$and:[
           {"review.date": {$gte : from}}, 
           {"review.date": {$lte: to}}
-          ]}
+        ]}
       }, 
       {$sample: 
-        { size: review_num }}]).toArray(function(err, results) { 
+        { size: review_num }
+      }]).toArray(function(err, results) { 
           if(!err) {
               res.json(results);
           }
@@ -88,8 +92,7 @@ mongoClient.connect(url, {useNewURLParser:true}, function(err,db){
               res.send(err);
               db.close();
           }
-         });
-  
+        });
   });
   
   
@@ -139,10 +142,10 @@ mongoClient.connect(url, {useNewURLParser:true}, function(err,db){
     
     collection.aggregate([
       {$limit: 1000000},
-      { $match:
+      {$match:
         { "review.date" : {$gte: from, $lte: to} }
       },
-      { $group:
+      {$group:
         { 
           _id: null,
           avgstars: {$avg: "$review.star_rating"}
@@ -163,22 +166,17 @@ mongoClient.connect(url, {useNewURLParser:true}, function(err,db){
 //helpful votes by product
   router.get('/review/helpful/:prodid', jsonparser, function(res, req){
     collection.aggregate([ 
-        { $limit : 1000000 }, 
-        { $match : { "product.id" : `${req.params.prodid}` }}, 
-        { 
-          $group: 
+        {$limit : 1000000 }, 
+        {$match : { "product.id" : `${req.params.prodid}` }}, 
+        {$group: 
             { 
               _id: null, 
               avgHelpfulVotes: { $avg : "$votes.helpful_votes" } 
               
             }
         }
-        ]).toArray(function(err, results) { 
+     ]).toArray(function(err, results) { 
       if(!err) {
-          /*console.log(results.length);
-          for(var i = 0; i < results.length; i++) {
-            console.log(results[i]);
-          }*/
           res.json(results);
       }
       else {
@@ -191,18 +189,16 @@ mongoClient.connect(url, {useNewURLParser:true}, function(err,db){
 //average review info for customer by category
   router.get('/review/info/:custid', jsonparser, function(req,res){
     collection.aggregate([
-        { $limit : 1000000 },
-        {
-            $match: { customer_id : `${req.params.custid}` } 
+        {$limit : 1000000 },
+        {$match: { customer_id : `${req.params.custid}` } 
         }, 
-        { 
-            $group: 
-            { 
-                _id: "$product.category", 
-                avgStars: { $avg : "$review.star_rating" }, 
-                avgHelpfulVotes: { $avg : "$votes.helpful_votes" },
-                avgTotalVotes: { $avg : "$votes.total_votes" }
-            } 
+        {$group: 
+          { 
+              _id: "$product.category", 
+              avgStars: { $avg : "$review.star_rating" }, 
+              avgHelpfulVotes: { $avg : "$votes.helpful_votes" },
+              avgTotalVotes: { $avg : "$votes.total_votes" }
+          } 
         } 
     ]).toArray(function(err, results) { 
       if(!err) {
